@@ -15,11 +15,10 @@ while True:
     if id in whitelist and id in timedOut:
         timedOut.remove(id)
         timedIn.append(id)
-        print("out " + str(timedOut))
-        print("in "+ str(timedIn))
-        # print("IN: " + str(id))
+        print("out %s" % timedOut)
+        print("in %s" % timedIn)
     elif id in whitelist and id in timedIn:
         timedIn.remove(id)
         timedOut.append(id)
-        print("out " + str(timedOut))
-        print("in "+ str(timedIn))
+        print("out %s" % timedOut)
+        print("in %s" % timedIn)
