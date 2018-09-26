@@ -3,32 +3,24 @@ from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
 import datetime
+import time
 
-# Credentials (don't touch)
-SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
-store = file.Storage('token.json')
-creds = store.get()
-if not creds or creds.invalid:
-    flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
-    creds = tools.run_flow(flow, store)
-service = build('sheets', 'v4', http=creds.authorize(Http()))
+def getECADictionary(values):
+    ecaDict = dict()
+    idColumn = 1
+    nameCol = 0
 
+    for i in range(1, len(values)):
+        ecaDict[int(values[i][idColumn])] = values[i][nameCol]
+    return ecaDict
 
-# # Call the Sheets API
-SPREADSHEET_ID = '1jsNGLL-Nr0gkaAhqweQqjuPVxup0DfgTLf81X3gdmZU'
-RANGE_NAME = 'A:Z'
-result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID,
-                                            range=RANGE_NAME).execute()
-values = result.get('values', [])
+def getWhitelist(ids):
+    whitelist = set()
+    for key in ids:
+        whitelist.add(int(key))
+    return whitelist
 
-whitelist = [2019240, 2019291,2019039,2019153,2019654]
-ids = {2019240: "Arthur DiLeo Jr.", 2019291: "Nicholas Fierro", 2019039: "Charley Baker", 2019153: "Stephen Ciupinski", 2019654: "Jack Roddy"}
-
-timedIn = list()
-timedOut = list()
-timedOut.extend(whitelist)
-
-def duplicateSheet():
+def duplicateSheet(currentDate):
     requestBody = \
         {
             "destinationSpreadsheetId": SPREADSHEET_ID,
@@ -47,7 +39,7 @@ def duplicateSheet():
                     "updateSheetProperties": {
                         "properties": {
                             "sheetId": duplicated["sheetId"],
-                            "title": datetime.datetime.now().strftime("%B %Y")
+                            "title": currentDate
                         },
                         "fields": "title",
                     }
@@ -58,15 +50,13 @@ def duplicateSheet():
     request = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID,
                                                  body=requestBody2)
     request.execute()
-    return duplicated
+    return duplicated["title"]
 
 def findStudentIndex(studentId):
     #finds the row index of the student's details
     # iterates col-major
     index = 1
-    for col in range(len(values)):
-        if col == 0:
-            continue
+    for col in range(1, len(values)):
         for val in values[col]:
             if ids[studentId] == val:
                 return index
@@ -77,7 +67,16 @@ def getTime():
     return datetime.datetime.now().strftime("%I:%M%p")
 
 def getDate():
-    return datetime.datetime.now().strftime("%B %d, %Y")
+    return datetime.datetime.now().strftime("%m/%d/%y")
+
+def getSheets():
+    sheet_metadata = service.spreadsheets().get(
+        spreadsheetId=SPREADSHEET_ID).execute()
+    sheets = sheet_metadata.get('sheets', '')
+    listOfSheets = set()
+    for sheet in sheets:
+        listOfSheets.add(sheet["properties"]["title"])
+    return listOfSheets
 
 def findNextTimeInIndex(studentId):
     #even row index
@@ -101,20 +100,22 @@ def findNextTimeOutIndex(studentId):
 
 def indicesToRange(studentIndex, headerIndex):
     headerCol = chr(65+headerIndex)
+    print("%s%s" % (headerCol, studentIndex+1))
     return "%s%s" % (headerCol, studentIndex+1)
 
-def insertTime(studentId, status):
+def insertTime(studentId, status, CURRENT_DAY_RANGE):
     studentIndex = findStudentIndex(studentId)
     if status == "in": headerIndex = findNextTimeInIndex(studentId)
     else: headerIndex = findNextTimeOutIndex(studentId)
     currentTime = getTime()
     body = {
-        "range": indicesToRange(studentIndex, headerIndex),
+        "range": CURRENT_DAY_RANGE + "!" + indicesToRange(studentIndex, headerIndex),
         "majorDimension": "ROWS",
         'values': [[currentTime]]
     }
     service.spreadsheets().values().update(
-        spreadsheetId=SPREADSHEET_ID, range=indicesToRange(studentIndex,headerIndex),
+        spreadsheetId=SPREADSHEET_ID,
+        range=(CURRENT_DAY_RANGE + "!" + indicesToRange(studentIndex,headerIndex)),
         valueInputOption="USER_ENTERED", body=body).execute()
 
 def isCheckedIn(studentId):
@@ -123,20 +124,54 @@ def isCheckedIn(studentId):
     if checkedInIndex < checkedOutIndex: return False
     else: return True
 
+def newDay():
+    sheets = getSheets()
+    currentDate = getDate()
+    if currentDate not in sheets:
+        duplicateSheet(currentDate)
+    return currentDate
+
+
+# Credentials (don't touch)
+SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+store = file.Storage('token.json')
+creds = store.get()
+if not creds or creds.invalid:
+    flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
+    creds = tools.run_flow(flow, store)
+service = build('sheets', 'v4', http=creds.authorize(Http()))
+
+
+# # Call the Sheets API
+SPREADSHEET_ID = '1jsNGLL-Nr0gkaAhqweQqjuPVxup0DfgTLf81X3gdmZU'
+RANGE_NAME = 'A:Z'
+
+CURRENT_DAY_RANGE = "Template"
+result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID,
+                                            range=RANGE_NAME).execute()
+values = result.get('values', [])
+print(values)
+
+ids = getECADictionary(values)
+whitelist = getWhitelist(ids)
 
 while True:
+    CURRENT_DAY_RANGE = newDay()
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID,
+                                                 range=CURRENT_DAY_RANGE).execute()
+    values = result.get('values', [])
     studentId = input("Enter ID: ")
     studentId = int(studentId)
     if studentId in whitelist:
         if isCheckedIn(studentId):
-            insertTime(studentId, "out")
+            insertTime(studentId, "out", CURRENT_DAY_RANGE)
             result = service.spreadsheets().values().get(
                 spreadsheetId=SPREADSHEET_ID,
-                range=RANGE_NAME).execute()
+                range=CURRENT_DAY_RANGE).execute()
             values = result.get('values', [])
         else:
-            insertTime(studentId, "in")
+            insertTime(studentId, "in",CURRENT_DAY_RANGE)
             result = service.spreadsheets().values().get(
                 spreadsheetId=SPREADSHEET_ID,
-                range=RANGE_NAME).execute()
+                range=CURRENT_DAY_RANGE).execute()
             values = result.get('values', [])
