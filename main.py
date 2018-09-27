@@ -153,6 +153,10 @@ def findSheetId(title):
         sheetIdDict[sheets[i]["properties"]["title"]] = sheets[i]["properties"]["sheetId"]
     return sheetIdDict[title]
 
+# def autoCheckOut():
+#     currentTime = getTime()
+#     if currentTime ==
+
 # changes the background color of a cell
 def changeCellColor(CURRENT_SHEETID, studentIndex, type):
     redRequest = \
@@ -253,7 +257,7 @@ while True:
     # waits for input from barcode scanner (can be inserted manually)
     studentId = input("Enter ID: ")
     # avoids error where ID returns .jpg as the ID num
-    if ".jpg" in studentId:
+    if ".JPG" in studentId:
         studentId = studentId[:7]
     studentId = int(studentId)
     # is the student an ECA student?
