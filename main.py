@@ -5,9 +5,6 @@ from oauth2client import file, client, tools
 import datetime
 import time
 
-#full id num.jpg
-
-
 # Goes through student list in template file and links id numbers to students
 # stores in a dictionary
 def getECADictionary(values):
@@ -57,7 +54,7 @@ def duplicateSheet(currentDate):
     request = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID,
                                                  body=requestBody2)
     request.execute()
-    return duplicated["title"]
+    return duplicated["sheetId"]
 
 # finds the row index that pertains to the specific student based off ID
 def findStudentIndex(studentId):
@@ -76,16 +73,6 @@ def getTime():
 #gets the current date. format: MM:DD:YY
 def getDate():
     return datetime.datetime.now().strftime("%m/%d/%y")
-
-#gets a list of the current sheets in the document
-def getSheets():
-    sheet_metadata = service.spreadsheets().get(
-        spreadsheetId=SPREADSHEET_ID).execute()
-    sheets = sheet_metadata.get('sheets', '')
-    listOfSheets = set()
-    for sheet in sheets:
-        listOfSheets.add(sheet["properties"]["title"])
-    return listOfSheets
 
 # finds the next time in cell to use for the specific student.
 # used for when a student checks in twice
@@ -139,6 +126,16 @@ def isCheckedIn(studentId):
     if checkedInIndex < checkedOutIndex: return False
     else: return True
 
+#gets a list of the current sheets in the document
+def getSheets():
+    sheet_metadata = service.spreadsheets().get(
+        spreadsheetId=SPREADSHEET_ID).execute()
+    sheets = sheet_metadata.get('sheets', '')
+    listOfSheets = list()
+    for sheet in sheets:
+        listOfSheets.append(sheet["properties"]["title"])
+    return listOfSheets
+
 # detects if there is a new day and updates the current sheet to edit
 def newDay():
     sheets = getSheets()
@@ -147,37 +144,78 @@ def newDay():
         duplicateSheet(currentDate)
     return currentDate
 
+def findSheetId(title):
+    sheet_metadata = service.spreadsheets().get(
+        spreadsheetId=SPREADSHEET_ID).execute()
+    sheets = sheet_metadata.get('sheets', '')
+    sheetIdDict = dict()
+    for i in range(len(sheets)):
+        sheetIdDict[sheets[i]["properties"]["title"]] = sheets[i]["properties"]["sheetId"]
+    return sheetIdDict[title]
+
 # changes the background color of a cell
-def changeCellColor():
+def changeCellColor(CURRENT_SHEETID, studentIndex, type):
     redRequest = \
         {
             "requests": [
                 {
-                    "updateCell": {
+                    "repeatCell": {
                         "range": {
-                            "sheetId": 1126291390,
-                            "startRowIndex": 1,
-                            "endRowIndex": 1,
-                            "startColumnIndex": 1,
+                            "sheetId": CURRENT_SHEETID,
+                            "startRowIndex": studentIndex,
+                            "endRowIndex": studentIndex+1,
+                            "startColumnIndex": 0,
                             "endColumnIndex": 1
                         },
                         "cell": {
                             "userEnteredFormat": {
                                 "backgroundColor": {
-                                    "red": 1,
-                                    "green": 0,
-                                    "blue": 0
+                                    "red": 0.95686,
+                                    "green": 0.78039,
+                                    "blue": 0.76471
                                 }
                             }
                         },
-                        "fields": "userEnteredFormat(backgroundColor)"
+                        "fields": "userEnteredFormat.backgroundColor"
                     }
                 }
             ]
         }
 
-    request = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID,
+    greenRequest = \
+        {
+            "requests": [
+                {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": CURRENT_SHEETID,
+                            "startRowIndex": studentIndex,
+                            "endRowIndex": studentIndex + 1,
+                            "startColumnIndex": 0,
+                            "endColumnIndex": 1
+                        },
+                        "cell": {
+                            "userEnteredFormat": {
+                                "backgroundColor": {
+                                    "red": 0.71765,
+                                    "green": 0.88235,
+                                    "blue": 0.80392
+                                }
+                            }
+                        },
+                        "fields": "userEnteredFormat.backgroundColor"
+                    }
+                }
+            ]
+        }
+
+    if type == "red":
+        request = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID,
                                                  body=redRequest)
+    else:
+        request = service.spreadsheets().batchUpdate(
+            spreadsheetId=SPREADSHEET_ID,
+            body=greenRequest)
     return request.execute()
 
 
@@ -196,18 +234,27 @@ service = build('sheets', 'v4', http=creds.authorize(Http()))
 SPREADSHEET_ID = '1jsNGLL-Nr0gkaAhqweQqjuPVxup0DfgTLf81X3gdmZU'
 CURRENT_DAY_RANGE = "Template"
 
+result = service.spreadsheets().values().get(
+    spreadsheetId=SPREADSHEET_ID,
+    range=CURRENT_DAY_RANGE).execute()
+values = result.get('values', [])
+
 ids = getECADictionary(values)
 whitelist = getWhitelist(ids)
 
 while True:
     # gets the current sheet to input data on
     CURRENT_DAY_RANGE = newDay()
+    CURRENT_DAY_SHEETID = findSheetId(CURRENT_DAY_RANGE)
     # refreshes the values of the page
     result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID,
                                                  range=CURRENT_DAY_RANGE).execute()
     values = result.get('values', [])
     # waits for input from barcode scanner (can be inserted manually)
     studentId = input("Enter ID: ")
+    # avoids error where ID returns .jpg as the ID num
+    if ".jpg" in studentId:
+        studentId = studentId[:7]
     studentId = int(studentId)
     # is the student an ECA student?
     if studentId in whitelist:
@@ -215,6 +262,8 @@ while True:
         if isCheckedIn(studentId):
             # add out time to doc
             insertTime(studentId, "out", CURRENT_DAY_RANGE)
+            changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
+                            "red")
             # update vals
             result = service.spreadsheets().values().get(
                 spreadsheetId=SPREADSHEET_ID,
@@ -223,6 +272,8 @@ while True:
         else:
             # check in the student
             insertTime(studentId, "in",CURRENT_DAY_RANGE)
+            changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
+                            "green")
             # update vals
             result = service.spreadsheets().values().get(
                 spreadsheetId=SPREADSHEET_ID,
