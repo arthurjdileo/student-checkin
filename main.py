@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
 from googleapiclient.discovery import build
 from httplib2 import Http
@@ -74,6 +76,9 @@ def getTime():
 def getDate():
     return datetime.datetime.now().strftime("%m/%d/%y")
 
+def getWeek():
+    return datetime.datetime.today().weekday()
+
 # finds the next time in cell to use for the specific student.
 # used for when a student checks in twice
 def findNextTimeInIndex(studentId):
@@ -140,7 +145,9 @@ def getSheets():
 def newDay():
     sheets = getSheets()
     currentDate = getDate()
-    if currentDate not in sheets:
+    # assure we are only making pages for the weekdays
+    week = getWeek
+    if currentDate not in sheets and week < 0:
         duplicateSheet(currentDate)
     return currentDate
 
@@ -153,9 +160,6 @@ def findSheetId(title):
         sheetIdDict[sheets[i]["properties"]["title"]] = sheets[i]["properties"]["sheetId"]
     return sheetIdDict[title]
 
-# def autoCheckOut():
-#     currentTime = getTime()
-#     if currentTime ==
 
 # changes the background color of a cell
 def changeCellColor(CURRENT_SHEETID, studentIndex, type):
@@ -222,6 +226,10 @@ def changeCellColor(CURRENT_SHEETID, studentIndex, type):
             body=greenRequest)
     return request.execute()
 
+# def autoCheckout():
+#     currentTime = getTime()
+#     if currentTime == "2:23PM":
+#
 
 
 # Credentials (don't touch)
@@ -268,18 +276,13 @@ while True:
             insertTime(studentId, "out", CURRENT_DAY_RANGE)
             changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
                             "red")
-            # update vals
-            result = service.spreadsheets().values().get(
-                spreadsheetId=SPREADSHEET_ID,
-                range=CURRENT_DAY_RANGE).execute()
-            values = result.get('values', [])
         else:
             # check in the student
             insertTime(studentId, "in",CURRENT_DAY_RANGE)
             changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
                             "green")
-            # update vals
-            result = service.spreadsheets().values().get(
-                spreadsheetId=SPREADSHEET_ID,
-                range=CURRENT_DAY_RANGE).execute()
-            values = result.get('values', [])
+        # update vals
+        result = service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range=CURRENT_DAY_RANGE).execute()
+        values = result.get('values', [])
