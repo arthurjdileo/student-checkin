@@ -77,7 +77,7 @@ def getDate():
     return datetime.datetime.now().strftime("%m/%d/%y")
 
 def getWeek():
-    return datetime.datetime.today().weekday()
+    return datetime.date.today().weekday()
 
 # finds the next time in cell to use for the specific student.
 # used for when a student checks in twice
@@ -146,8 +146,8 @@ def newDay():
     sheets = getSheets()
     currentDate = getDate()
     # assure we are only making pages for the weekdays
-    week = getWeek
-    if currentDate not in sheets and week < 0:
+    week = getWeek()
+    if currentDate not in sheets and week not in [6,7]:
         duplicateSheet(currentDate)
     return currentDate
 
