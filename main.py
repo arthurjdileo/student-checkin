@@ -45,9 +45,10 @@ def duplicateSheet(currentDate):
                     "updateSheetProperties": {
                         "properties": {
                             "sheetId": duplicated["sheetId"],
-                            "title": currentDate
+                            "title": currentDate,
+                            "index": 1
                         },
-                        "fields": "title",
+                        "fields": "title, index",
                     }
                 }
             ]
@@ -147,7 +148,7 @@ def newDay():
     currentDate = getDate()
     # assure we are only making pages for the weekdays
     week = getWeek()
-    if currentDate not in sheets and week not in [6,7]:
+    if currentDate not in sheets and week not in {6,7}:
         duplicateSheet(currentDate)
     return currentDate
 
@@ -230,6 +231,9 @@ def changeCellColor(CURRENT_SHEETID, studentIndex, type):
 #     currentTime = getTime()
 #     if currentTime == "2:23PM":
 #
+
+# def expirePage():
+
 
 
 # Credentials (don't touch)
