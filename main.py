@@ -150,11 +150,13 @@ def insertTime(studentId, status, CURRENT_DAY_RANGE):
         range=(CURRENT_DAY_RANGE + "!" + indicesToRange(studentIndex,headerIndex)),
         valueInputOption="USER_ENTERED", body=body).execute()
 
+# runs through the check in process
 def checkIn(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
     insertTime(studentId, "in", CURRENT_DAY_RANGE)
     changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
                     "green")
 
+# runs through the check out process
 def checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
     insertTime(studentId, "out", CURRENT_DAY_RANGE)
     changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
@@ -187,6 +189,7 @@ def newDay():
         duplicateSheet(currentDate)
     return currentDate
 
+# finds the sheetID given string name of sheet
 def findSheetId(title):
     sheet_metadata = service.spreadsheets().get(
         spreadsheetId=SPREADSHEET_ID).execute()
@@ -262,6 +265,7 @@ def changeCellColor(CURRENT_SHEETID, studentIndex, type):
             body=greenRequest)
     return request.execute()
 
+# checks out all students coloring only the students that have actually signed in
 def autoCheckout(ecaDict, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
     for studentId in ecaDict:
         if isCheckedIn(studentId):
@@ -269,6 +273,7 @@ def autoCheckout(ecaDict, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
         else:
             insertTime(studentId, "out", CURRENT_DAY_RANGE)
 
+# deletes sheets older than 30 days
 def expirePages(CURRENT_DAY_RANGE):
     delta = timedelta(days=30)
     CURRENT_DAY_RANGE = datetime.strptime(CURRENT_DAY_RANGE, "%m/%d/%y")
