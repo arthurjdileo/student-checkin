@@ -4,8 +4,8 @@ from __future__ import print_function
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
-import datetime
 import time
+from datetime import *
 
 # Goes through student list in template file and links id numbers to students
 # stores in a dictionary
@@ -24,6 +24,13 @@ def getWhitelist(ids):
     for key in ids:
         whitelist.add(int(key))
     return whitelist
+
+# updates variable with correct values in spreadsheet
+def updateSpreadsheetVals(values):
+    result = service.spreadsheets().values().get(
+        spreadsheetId=SPREADSHEET_ID,
+        range=CURRENT_DAY_RANGE).execute()
+    return result.get('values', [])
 
 # duplicates the template sheet. names the file the respective date
 def duplicateSheet(currentDate):
@@ -59,6 +66,23 @@ def duplicateSheet(currentDate):
     request.execute()
     return duplicated["sheetId"]
 
+def removeSheet(sheetName):
+    sheetID = findSheetId(sheetName)
+    requestBody = \
+        {
+            "requests": [
+                {
+                    "deleteSheet": {
+                        "sheetId": sheetID
+                    }
+                }
+            ]
+        }
+
+    request = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID,
+                                                 body=requestBody)
+    request.execute()
+
 # finds the row index that pertains to the specific student based off ID
 def findStudentIndex(studentId):
     index = 1
@@ -71,14 +95,15 @@ def findStudentIndex(studentId):
 
 # gets the current time. format: HH:MM:SS AM/PM
 def getTime():
-    return datetime.datetime.now().strftime("%I:%M%p")
+    return datetime.now().strftime("%I:%M%p")
 
 #gets the current date. format: MM:DD:YY
 def getDate():
-    return datetime.datetime.now().strftime("%m/%d/%y")
+    return datetime.now().strftime("%m/%d/%y")
 
+#gets day of week in numerical form. format: NUM{0,6}
 def getWeek():
-    return datetime.date.today().weekday()
+    return date.today().weekday()
 
 # finds the next time in cell to use for the specific student.
 # used for when a student checks in twice
@@ -124,6 +149,16 @@ def insertTime(studentId, status, CURRENT_DAY_RANGE):
         spreadsheetId=SPREADSHEET_ID,
         range=(CURRENT_DAY_RANGE + "!" + indicesToRange(studentIndex,headerIndex)),
         valueInputOption="USER_ENTERED", body=body).execute()
+
+def checkIn(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
+    insertTime(studentId, "in", CURRENT_DAY_RANGE)
+    changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
+                    "green")
+
+def checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
+    insertTime(studentId, "out", CURRENT_DAY_RANGE)
+    changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
+                    "red")
 
 # checks if the current student is checked in
 def isCheckedIn(studentId):
@@ -227,13 +262,21 @@ def changeCellColor(CURRENT_SHEETID, studentIndex, type):
             body=greenRequest)
     return request.execute()
 
-# def autoCheckout():
-#     currentTime = getTime()
-#     if currentTime == "2:23PM":
-#
+def autoCheckout(ecaDict, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
+    for studentId in ecaDict:
+        if isCheckedIn(studentId):
+            checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
+        else:
+            insertTime(studentId, "out", CURRENT_DAY_RANGE)
 
-# def expirePage():
-
+def expirePages(CURRENT_DAY_RANGE):
+    delta = timedelta(days=30)
+    CURRENT_DAY_RANGE = datetime.strptime(CURRENT_DAY_RANGE, "%m/%d/%y")
+    delimiter = CURRENT_DAY_RANGE - delta
+    sheets = getSheets()
+    for i in range(1, len(sheets)):
+        if datetime.strptime(sheets[i], "%m/%d/%y") < (delimiter):
+            removeSheet(sheets[i])
 
 
 # Credentials (don't touch)
@@ -258,35 +301,47 @@ values = result.get('values', [])
 ids = getECADictionary(values)
 whitelist = getWhitelist(ids)
 
+# lists commands
+print("**********")
+print("Clean - Delete sheets older than 30 days.")
+print("Out - Checks out all students for the day. Students not highlighted were absent.")
+print("**********")
+
 while True:
     # gets the current sheet to input data on
     CURRENT_DAY_RANGE = newDay()
     CURRENT_DAY_SHEETID = findSheetId(CURRENT_DAY_RANGE)
+
     # refreshes the values of the page
-    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID,
-                                                 range=CURRENT_DAY_RANGE).execute()
-    values = result.get('values', [])
+    values = updateSpreadsheetVals(values)
+
     # waits for input from barcode scanner (can be inserted manually)
     studentId = input("Enter ID: ")
-    # avoids error where ID returns .jpg as the ID num
-    if ".JPG" in studentId:
-        studentId = studentId[:7]
-    studentId = int(studentId)
-    # is the student an ECA student?
-    if studentId in whitelist:
-        # is the student already checked in? if so, check them out.
-        if isCheckedIn(studentId):
-            # add out time to doc
-            insertTime(studentId, "out", CURRENT_DAY_RANGE)
-            changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
-                            "red")
-        else:
-            # check in the student
-            insertTime(studentId, "in",CURRENT_DAY_RANGE)
-            changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
-                            "green")
-        # update vals
-        result = service.spreadsheets().values().get(
-            spreadsheetId=SPREADSHEET_ID,
-            range=CURRENT_DAY_RANGE).execute()
-        values = result.get('values', [])
+
+    # remove sheets older than 30 days
+    if studentId.lower() == "clean":
+        expirePages(CURRENT_DAY_RANGE)
+        print("Sheets older than 30 days have been deleted!")
+
+    # auto checks out
+    elif studentId.lower() == "out":
+        autoCheckout(ids, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
+        print("All students have been checked out for the day.")
+
+    # runs thru normal procedure
+    else:
+        # avoids error where ID returns .jpg as the ID num
+        if ".JPG" in studentId:
+            studentId = studentId[:7]
+        studentId = int(studentId)
+        # is the student an ECA student?
+        if studentId in whitelist:
+            # is the student already checked in? if so, check them out.
+            if isCheckedIn(studentId):
+                # add out time to doc
+                checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
+            else:
+                # check in the student
+                checkIn(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
+            # update vals
+            values = updateSpreadsheetVals(values)
