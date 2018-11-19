@@ -4,8 +4,8 @@ from __future__ import print_function
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
-import time
 from datetime import *
+import webbrowser
 
 # Goes through student list in template file and links id numbers to students
 # stores in a dictionary
@@ -283,6 +283,11 @@ def expirePages(CURRENT_DAY_RANGE):
         if datetime.strptime(sheets[i], "%m/%d/%y") < (delimiter):
             removeSheet(sheets[i])
 
+# Opens the google sheet w/ day as current sheet
+def openDoc(sheetId):
+    url = "https://docs.google.com/spreadsheets/u/1/d/1jsNGLL-Nr0gkaAhqweQqjuPVxup0DfgTLf81X3gdmZU/edit#gid=" + str(sheetId)
+    webbrowser.open_new(url)
+
 
 # Credentials (don't touch)
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
@@ -314,8 +319,12 @@ print("**********")
 
 while True:
     # gets the current sheet to input data on
-    CURRENT_DAY_RANGE = newDay()
-    CURRENT_DAY_SHEETID = findSheetId(CURRENT_DAY_RANGE)
+    try:
+        CURRENT_DAY_RANGE = newDay()
+        CURRENT_DAY_SHEETID = findSheetId(CURRENT_DAY_RANGE)
+    except:
+        print("This program does not work on the weekends.")
+        exit()
 
     # refreshes the values of the page
     values = updateSpreadsheetVals(values)
@@ -332,6 +341,10 @@ while True:
     elif studentId.lower() == "out":
         autoCheckout(ids, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
         print("All students have been checked out for the day.")
+
+    # opens doc on today's sheet
+    elif studentId.lower() == "open":
+        openDoc(CURRENT_DAY_SHEETID)
 
     # runs thru normal procedure
     else:
