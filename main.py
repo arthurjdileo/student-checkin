@@ -317,49 +317,50 @@ print("Clean - Delete sheets older than 30 days.")
 print("Out - Checks out all students for the day. Students not highlighted were absent.")
 print("**********")
 
-while True:
-    # gets the current sheet to input data on
-    try:
-        CURRENT_DAY_RANGE = newDay()
-        CURRENT_DAY_SHEETID = findSheetId(CURRENT_DAY_RANGE)
-    except:
-        print("This program does not work on the weekends.")
-        exit()
+if __name__ == "__main__":
+    while True:
+        # gets the current sheet to input data on
+        try:
+            CURRENT_DAY_RANGE = newDay()
+            CURRENT_DAY_SHEETID = findSheetId(CURRENT_DAY_RANGE)
+        except:
+            print("This program does not work on the weekends.")
+            exit()
 
-    # refreshes the values of the page
-    values = updateSpreadsheetVals(values)
+        # refreshes the values of the page
+        values = updateSpreadsheetVals(values)
 
-    # waits for input from barcode scanner (can be inserted manually)
-    studentId = input("Enter ID: ")
+        # waits for input from barcode scanner (can be inserted manually)
+        studentId = input("Enter ID: ")
 
-    # remove sheets older than 30 days
-    if studentId.lower() == "clean":
-        expirePages(CURRENT_DAY_RANGE)
-        print("Sheets older than 30 days have been deleted!")
+        # remove sheets older than 30 days
+        if studentId.lower() == "clean":
+            expirePages(CURRENT_DAY_RANGE)
+            print("Sheets older than 30 days have been deleted!")
 
-    # auto checks out
-    elif studentId.lower() == "out":
-        autoCheckout(ids, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
-        print("All students have been checked out for the day.")
+        # auto checks out
+        elif studentId.lower() == "out":
+            autoCheckout(ids, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
+            print("All students have been checked out for the day.")
 
-    # opens doc on today's sheet
-    elif studentId.lower() == "open":
-        openDoc(CURRENT_DAY_SHEETID)
+        # opens doc on today's sheet
+        elif studentId.lower() == "open":
+            openDoc(CURRENT_DAY_SHEETID)
 
-    # runs thru normal procedure
-    else:
-        # avoids error where ID returns .jpg as the ID num
-        if ".JPG" in studentId:
-            studentId = studentId[:7]
-        studentId = int(studentId)
-        # is the student an ECA student?
-        if studentId in whitelist:
-            # is the student already checked in? if so, check them out.
-            if isCheckedIn(studentId):
-                # add out time to doc
-                checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
-            else:
-                # check in the student
-                checkIn(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
-            # update vals
-            values = updateSpreadsheetVals(values)
+        # runs thru normal procedure
+        else:
+            # avoids error where ID returns .jpg as the ID num
+            if ".JPG" in studentId:
+                studentId = studentId[:7]
+            studentId = int(studentId)
+            # is the student an ECA student?
+            if studentId in whitelist:
+                # is the student already checked in? if so, check them out.
+                if isCheckedIn(studentId):
+                    # add out time to doc
+                    checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
+                else:
+                    # check in the student
+                    checkIn(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
+                # update vals
+                values = updateSpreadsheetVals(values)
