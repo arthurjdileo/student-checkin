@@ -6,6 +6,7 @@ from httplib2 import Http
 from oauth2client import file, client, tools
 from datetime import *
 import webbrowser
+import json
 
 # Goes through student list in template file and links id numbers to students
 # stores in a dictionary
@@ -26,11 +27,16 @@ def getWhitelist(ids):
     return whitelist
 
 # updates variable with correct values in spreadsheet
-def updateSpreadsheetVals(values):
+def updateSpreadsheetVals(SPREADSHEET_ID, CURRENT_DAY_RANGE):
     result = service.spreadsheets().values().get(
         spreadsheetId=SPREADSHEET_ID,
         range=CURRENT_DAY_RANGE).execute()
-    return result.get('values', [])
+    with open("values.json", "w+") as write_file:
+        json.dump(result.get('values', []), write_file)
+
+def readValues():
+    with open("values.json") as file:
+        return json.load(file)
 
 # duplicates the template sheet. names the file the respective date
 def duplicateSheet(currentDate):
@@ -107,7 +113,7 @@ def getWeek():
 
 # finds the next time in cell to use for the specific student.
 # used for when a student checks in twice
-def findNextTimeInIndex(studentId):
+def findNextTimeInIndex(values, studentId):
     #even row index
     rowIndex = findStudentIndex(studentId)
 
@@ -119,7 +125,7 @@ def findNextTimeInIndex(studentId):
 
 # finds the next time out cell to use for the specific student.
 # used for when a student checks out twice
-def findNextTimeOutIndex(studentId):
+def findNextTimeOutIndex(values, studentId):
     #odd row index
     rowIndex = findStudentIndex(studentId)
 
@@ -135,10 +141,10 @@ def indicesToRange(studentIndex, headerIndex):
     return "%s%s" % (headerCol, studentIndex+1)
 
 # inserts the current time for the specific student, in a in/out cell for the specific day
-def insertTime(studentId, status, CURRENT_DAY_RANGE):
+def insertTime(values, studentId, status, CURRENT_DAY_RANGE):
     studentIndex = findStudentIndex(studentId)
-    if status == "in": headerIndex = findNextTimeInIndex(studentId)
-    else: headerIndex = findNextTimeOutIndex(studentId)
+    if status == "in": headerIndex = findNextTimeInIndex(values, studentId)
+    else: headerIndex = findNextTimeOutIndex(values, studentId)
     currentTime = getTime()
     body = {
         "range": CURRENT_DAY_RANGE + "!" + indicesToRange(studentIndex, headerIndex),
@@ -151,21 +157,21 @@ def insertTime(studentId, status, CURRENT_DAY_RANGE):
         valueInputOption="USER_ENTERED", body=body).execute()
 
 # runs through the check in process
-def checkIn(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
-    insertTime(studentId, "in", CURRENT_DAY_RANGE)
+def checkIn(values, studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
+    insertTime(values, studentId, "in", CURRENT_DAY_RANGE)
     changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
                     "green")
 
 # runs through the check out process
-def checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
-    insertTime(studentId, "out", CURRENT_DAY_RANGE)
+def checkOut(values, studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID):
+    insertTime(values, studentId, "out", CURRENT_DAY_RANGE)
     changeCellColor(CURRENT_DAY_SHEETID, findStudentIndex(studentId),
                     "red")
 
 # checks if the current student is checked in
-def isCheckedIn(studentId):
-    checkedInIndex = findNextTimeInIndex(studentId)
-    checkedOutIndex = findNextTimeOutIndex(studentId)
+def isCheckedIn(values, studentId):
+    checkedInIndex = findNextTimeInIndex(values, studentId)
+    checkedOutIndex = findNextTimeOutIndex(values, studentId)
     if checkedInIndex < checkedOutIndex: return False
     else: return True
 
@@ -298,69 +304,9 @@ if not creds or creds.invalid:
     creds = tools.run_flow(flow, store)
 service = build('sheets', 'v4', http=creds.authorize(Http()))
 
-
-# Call the Sheets API
 SPREADSHEET_ID = '1jsNGLL-Nr0gkaAhqweQqjuPVxup0DfgTLf81X3gdmZU'
-CURRENT_DAY_RANGE = "Template"
 
-result = service.spreadsheets().values().get(
-    spreadsheetId=SPREADSHEET_ID,
-    range=CURRENT_DAY_RANGE).execute()
-values = result.get('values', [])
+values = readValues()
 
 ids = getECADictionary(values)
 whitelist = getWhitelist(ids)
-
-# lists commands
-print("**********")
-print("Clean - Delete sheets older than 30 days.")
-print("Out - Checks out all students for the day. Students not highlighted were absent.")
-print("**********")
-
-if __name__ == "__main__":
-    while True:
-        # gets the current sheet to input data on
-        try:
-            CURRENT_DAY_RANGE = newDay()
-            CURRENT_DAY_SHEETID = findSheetId(CURRENT_DAY_RANGE)
-        except:
-            print("This program does not work on the weekends.")
-            exit()
-
-        # refreshes the values of the page
-        values = updateSpreadsheetVals(values)
-
-        # waits for input from barcode scanner (can be inserted manually)
-        studentId = input("Enter ID: ")
-
-        # remove sheets older than 30 days
-        if studentId.lower() == "clean":
-            expirePages(CURRENT_DAY_RANGE)
-            print("Sheets older than 30 days have been deleted!")
-
-        # auto checks out
-        elif studentId.lower() == "out":
-            autoCheckout(ids, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
-            print("All students have been checked out for the day.")
-
-        # opens doc on today's sheet
-        elif studentId.lower() == "open":
-            openDoc(CURRENT_DAY_SHEETID)
-
-        # runs thru normal procedure
-        else:
-            # avoids error where ID returns .jpg as the ID num
-            if ".JPG" in studentId:
-                studentId = studentId[:7]
-            studentId = int(studentId)
-            # is the student an ECA student?
-            if studentId in whitelist:
-                # is the student already checked in? if so, check them out.
-                if isCheckedIn(studentId):
-                    # add out time to doc
-                    checkOut(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
-                else:
-                    # check in the student
-                    checkIn(studentId, CURRENT_DAY_RANGE, CURRENT_DAY_SHEETID)
-                # update vals
-                values = updateSpreadsheetVals(values)

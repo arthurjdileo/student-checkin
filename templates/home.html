@@ -1,0 +1,31 @@
+{% extends 'template.html' %}
+
+{% block body %}
+<script>
+    function onSubmit() {
+        var studentId = document.getElementByName("studentId").value;
+        document.getElementByName("studentId").value = "";
+    }
+</script>
+
+
+  <div class="text-center">
+      <div style="margin-top:50px" class="col-md-4 col-md-offset-4">
+      <div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Check-In/Out</h3> </div>
+<div class="panel-body">
+    <form accept-charset="UTF-8" role="form" method="POST">
+        <fieldset>
+            <div class="form-group">
+                <div class="input-group"> <span class="input-group-addon"><i class="fa fa-id-badge"></i></span>
+                    <input class="form-control ng-touched" onblur="this.focus()" type="number" autofocus name="studentId" placeholder="ID Number"> </div>
+            </div>
+            <input onclick="onSubmit();" class="btn btn-lg btn-primary btn-block" type="submit" value="Submit"> </fieldset>
+    </form>
+</div>
+  </div>
+  </div>
+  </div>
+</div>
+{% endblock %}
