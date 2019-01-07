@@ -319,6 +319,10 @@ print("**********")
 
 if __name__ == "__main__":
     while True:
+
+        # waits for input from barcode scanner (can be inserted manually)
+        studentId = input("Enter ID: ")
+
         # gets the current sheet to input data on
         try:
             CURRENT_DAY_RANGE = newDay()
@@ -329,9 +333,6 @@ if __name__ == "__main__":
 
         # refreshes the values of the page
         values = updateSpreadsheetVals(values)
-
-        # waits for input from barcode scanner (can be inserted manually)
-        studentId = input("Enter ID: ")
 
         # remove sheets older than 30 days
         if studentId.lower() == "clean":
