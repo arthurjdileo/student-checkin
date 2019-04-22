@@ -1,35 +1,26 @@
 package main
 
 import (
-	"net/http"
 	"log"
+	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
-func router(w http.ResponseWriter, r *http.Request) {
-	log.Println("GET ", r.URL.Path)
-
-	if r.URL.Path == "/index.html" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-
-	} else if len(r.URL.Path) > 8 && r.URL.Path[:9] == "/scripts/" {
-		path := "./www" + r.URL.Path
-		http.ServeFile(w, r, path)
-		return
-
-	} else if len(r.URL.Path) > 1 && r.URL.Path[0] == '/' {
-		// allow misc files like favicon and styles
-		http.ServeFile(w, r, "./www"+r.URL.Path)
-		return
-
-	}
-}
+const dir = "/"
 
 func main() {
-	http.HandleFunc("/", router)
+	router := mux.NewRouter().StrictSlash(true)
+	router.PathPrefix(dir).Handler(http.StripPrefix(dir, http.FileServer(http.Dir("./app"+dir))))
+
 	port := "8000"
 	bindAddress := ":" + port
 
+	srv := &http.Server{
+		Addr:    bindAddress,
+		Handler: router,
+	}
+
 	log.Println("hosted on ", bindAddress)
-	log.Fatal(http.ListenAndServe(bindAddress, nil))
+	log.Fatal(srv.ListenAndServe())
 }

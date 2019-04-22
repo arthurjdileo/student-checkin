@@ -1,4 +1,4 @@
-import m from 'scripts/modules/mithril.min.js';
+import m from '../modules/mithril.min.js';
 
 export function view() {
 	return m('p', 'shit');
