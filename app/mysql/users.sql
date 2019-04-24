@@ -1,7 +1,8 @@
+CREATE DATABASE IF NOT EXISTS `eca`;
 USE eca;
 
 CREATE TABLE users (
-	id int(11) AUTO_INCREMENT,
-	name varchar NOT NULL,
+	id int AUTO_INCREMENT UNIQUE,
+	name varchar(255) NOT NULL,
 	student_id int(7) PRIMARY KEY NOT NULL
 );

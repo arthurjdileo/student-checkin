@@ -1,0 +1,15 @@
+#sjv-logo {
+	background-image: url(../logo.png);
+	background-size: 115px 75px;
+	width: 115px;
+  	height: 75px;
+  	display: inline-block;
+}
+
+.navbar {
+	background-color: #F5F5F5;
+}
+
+.burger-menu {
+	
+}
