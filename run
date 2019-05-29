@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -a
+source ./env
+set +a
+echo "Compiling and running..."
+go build -mod vendor -o student-checkin && ./student-checkin

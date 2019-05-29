@@ -4,5 +4,5 @@ USE eca;
 CREATE TABLE users (
 	id int AUTO_INCREMENT UNIQUE,
 	name varchar(255) NOT NULL,
-	student_id int(7) PRIMARY KEY NOT NULL
+	student_id int(10) PRIMARY KEY NOT NULL
 );
