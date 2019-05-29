@@ -1,6 +1,7 @@
 package main
 
 import (
+	api "api.go"
 	"log"
 	"net/http"
 
@@ -23,4 +24,6 @@ func main() {
 
 	log.Println("hosted on ", bindAddress)
 	log.Fatal(srv.ListenAndServe())
+	api.Api()
+	log.Println("api started")
 }
