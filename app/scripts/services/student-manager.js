@@ -2,12 +2,12 @@ import m from '../modules/mithril.js';
 
 async function request(method, hash, data) {
 	if (data === "") {
-		await m.request({
+		return await m.request({
 			method: method,
 			url: window.location.origin + hash
 		});
 	} else {
-		await m.request({
+		return await m.request({
 			method: method,
 			url: window.location.origin + hash,
 			data: data
@@ -15,8 +15,16 @@ async function request(method, hash, data) {
 	}
 }
 
-export async function getUsers() {
-	return await request('GET', '/v1/users', "")
+export async function GetStudents() {
+	let r = await request('GET', '/api/students', "");
+	return r;
+}
+
+export async function NewStudent(name, student_id) {
+	let data = new FormData();
+	data.append("name", name);
+	data.append("student_id", student_id);
+	await request('POST', '/api/students/', data);
 }
 
 // export async function SubmitForm(data, edit=false, uuid="") {

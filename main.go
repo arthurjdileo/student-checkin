@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -28,9 +29,22 @@ func main() {
 		log.Printf("Cannot connect to db: %s", err)
 		return
 	}
-	router.Handle("/api/users/", GetUsers(db)).Methods(http.MethodGet)
-	router.Handle("/api/logs/", GetUsers(db)).Methods(http.MethodGet)
+	router.Handle("/api/students/", GetStudents(db)).Methods(http.MethodGet)
+	router.Handle("/api/logs/", GetLogs(db)).Methods(http.MethodGet)
+	router.Handle("/api/students/", NewStudent(db)).Methods(http.MethodPost)
 	router.PathPrefix(dir).Handler(http.StripPrefix(dir, http.FileServer(http.Dir("./app"+dir))))
+
+	// CORS
+	router.Use(handlers.CORS(
+		handlers.AllowedOrigins([]string{
+			"http://localhost:8000"}),
+		handlers.AllowedMethods([]string{
+			http.MethodOptions,
+			http.MethodPut,
+			http.MethodPost,
+			http.MethodGet,
+			http.MethodDelete,
+		})))
 
 	log.Println("api started")
 
@@ -46,8 +60,8 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func GetUsers(db *sql.DB) http.Handler {
-	const userQuery string = `
+func GetStudents(db *sql.DB) http.Handler {
+	const studentQuery string = `
 		SELECT JSON_OBJECT(
 			'id', users.id,
 			'name', users.name,
@@ -58,43 +72,7 @@ func GetUsers(db *sql.DB) http.Handler {
 		ORDER BY
 			users.id DESC
 	`
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		rows, err := db.Query(userQuery)
-		if err != nil {
-			log.Printf("%s", err)
-			return
-		}
-		defer rows.Close()
-
-		jsonRows := make([]json.RawMessage, 0)
-
-		for rows.Next() {
-			var jsonRow string
-
-			if err := rows.Scan(&jsonRow); err != nil {
-				log.Printf("%s", err)
-				return
-			}
-
-			raw := json.RawMessage(jsonRow)
-			jsonRows = append(jsonRows, raw)
-		}
-
-		if err := rows.Err(); err != nil {
-			log.Printf("%s", err)
-			return
-		}
-
-		ret, err := json.Marshal(jsonRows)
-		if err != nil {
-			log.Printf("%s", err)
-			return
-		}
-
-		w.Header().Set("Content-type", "application/json")
-		w.Write(ret)
-	})
+	return dbGetRows(db, studentQuery)
 }
 
 func GetLogs(db *sql.DB) http.Handler {
@@ -110,11 +88,42 @@ func GetLogs(db *sql.DB) http.Handler {
 		ORDER BY
 			logs.created DESC
 	`
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return dbGetRows(db, logQuery)
+}
 
-		rows, err := db.Query(logQuery)
+func NewStudent(db *sql.DB) http.Handler {
+	const newStudentQuery string = `
+		INSERT INTO users (name, student_id)
+		VALUES (?, ?)
+	`
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.ParseMultipartForm(1024)
+
+		for k, v := range r.Form {
+			log.Printf("%s = %s\n", k, v)
+		}
+		log.Printf("done")
+
+		name := r.FormValue("name")
+		log.Printf(name)
+		student_id := r.FormValue("student_id")
+
+		_, err := db.Exec(newStudentQuery, name, student_id)
 		if err != nil {
 			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	})
+}
+
+func dbGetRows(db *sql.DB, query string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		rows, err := db.Query(query)
+		if err != nil {
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		defer rows.Close()
@@ -126,6 +135,7 @@ func GetLogs(db *sql.DB) http.Handler {
 
 			if err := rows.Scan(&jsonRow); err != nil {
 				log.Printf("%s", err)
+				sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
 			}
 
@@ -135,16 +145,55 @@ func GetLogs(db *sql.DB) http.Handler {
 
 		if err := rows.Err(); err != nil {
 			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		ret, err := json.Marshal(jsonRows)
 		if err != nil {
 			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		w.Header().Set("Content-type", "application/json")
 		w.Write(ret)
 	})
+}
+
+type response struct {
+	Status  string      `json:"status"`
+	Message string      `json:"message"`
+	Error   string      `json:"error"`
+	Data    interface{} `json:"data"`
+}
+
+func sendErrorResponse(w http.ResponseWriter, httpStatus int, message string) {
+	response := &response{
+		Status:  "failure",
+		Message: "An error has occured",
+		Error:   message,
+		Data:    struct{}{},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(httpStatus)
+	writeJsonResponse(w, response)
+}
+
+func writeJsonResponse(w http.ResponseWriter, response interface{}) {
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		log.Printf("cannot encode JSON response: %s", err.Error())
+		sendInternalErrorResponse(w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
+}
+
+func sendInternalErrorResponse(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	http.Error(w, `{"status":500,"message":"ERROR","error":"Internal server error"}`, 500)
 }
