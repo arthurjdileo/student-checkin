@@ -1,6 +1,6 @@
 import m from '../modules/mithril.js';
 import {navBar, CreaTable} from '../modules/util.js';
-import {GetStudents, NewStudent} from '../services/student-manager.js';
+import {GetStudents, NewStudent, EditStudent} from '../services/student-manager.js';
 
 let students = [];
 
@@ -50,12 +50,20 @@ var UserTable = {
 						alert("Please finishing editing (press the \"Done\" button next to the selected rows) before saving your changes.");
 						return;
 					}
-					console.log(r.student_id)
-					NewStudent(r.name, r.student_id)
+					NewStudent(r.name, r.student_id);
+					m.redraw();
 				}
 			},
 			saveEditedFunc(editedRows) {
 				console.log("edited: " + JSON.stringify(editedRows))
+				for (let r of editedRows) {
+					if (r.editing) {
+						alert("Please finishing editing (press the \"Done\" button next to the selected rows) before saving your changes.");
+						return;
+					}
+					EditStudent(r.name, r.student_id, r.id);
+					m.redraw();
+				}
 			}
 		})
 		];

@@ -32,6 +32,7 @@ func main() {
 	router.Handle("/api/students/", GetStudents(db)).Methods(http.MethodGet)
 	router.Handle("/api/logs/", GetLogs(db)).Methods(http.MethodGet)
 	router.Handle("/api/students/", NewStudent(db)).Methods(http.MethodPost)
+	router.Handle("/api/students/{id}", NewStudent(db)).Methods(http.MethodPost)
 	router.PathPrefix(dir).Handler(http.StripPrefix(dir, http.FileServer(http.Dir("./app"+dir))))
 
 	// CORS
@@ -99,16 +100,33 @@ func NewStudent(db *sql.DB) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.ParseMultipartForm(1024)
 
-		for k, v := range r.Form {
-			log.Printf("%s = %s\n", k, v)
-		}
-		log.Printf("done")
-
 		name := r.FormValue("name")
-		log.Printf(name)
 		student_id := r.FormValue("student_id")
 
 		_, err := db.Exec(newStudentQuery, name, student_id)
+		if err != nil {
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	})
+}
+
+func EditStudent(db *sql.DB) http.Handler {
+	const editStudentQuery string = `
+		UPDATE users SET name = ?, student_id = ?
+		WHERE id = ?
+	`
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.ParseMultipartForm(1024)
+
+		vars := mux.Vars(r)
+		name := r.FormValue("name")
+		student_id := r.FormValue("student_id")
+		id := vars["id"]
+		log.Println(id)
+
+		_, err := db.Exec(editStudentQuery, name, student_id, id)
 		if err != nil {
 			log.Printf("%s", err)
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())

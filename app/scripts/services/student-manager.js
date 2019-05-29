@@ -27,6 +27,13 @@ export async function NewStudent(name, student_id) {
 	await request('POST', '/api/students/', data);
 }
 
+export async function EditStudent(name, student_id, id) {
+	let data = new FormData();
+	data.append("name", name);
+	data.append("student_id", student_id);
+	await request('POST', `/api/students/${id}`, data)
+}
+
 // export async function SubmitForm(data, edit=false, uuid="") {
 // 	if (!edit) {
 // 		await m.request({
