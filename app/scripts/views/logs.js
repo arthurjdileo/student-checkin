@@ -23,7 +23,7 @@ let logTable = {
 					{label: 'Student Name', key: 'name', attrs: {style: 'width: 250px;'}},
 					{label: 'Status', key: 'action', attrs: {style: 'width: 150px;'}}
 				],
-				backupKeys: ['name'],
+				backupKeys: ['action'],
 				body: logBody,
 				rowMapper(s) {
 					return [
@@ -37,7 +37,6 @@ let logTable = {
 };
 
 export function view() {
-	setInterval(oninit, 1000)
 	return [
 		m(navBar),
 		m('div', {style: 'text-align: center; margin-top: 15px;'},

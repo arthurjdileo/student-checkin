@@ -250,10 +250,7 @@ func LogStudent(db *sql.DB) http.Handler {
 				nextAction = "in"
 			}
 		}
-
-		log.Printf(curAction)
-		log.Printf(nextAction)
-
+		
 		_, err = db.Exec(logQuery, student_id, nextAction)
 		if err != nil {
 			log.Printf("%s", err)

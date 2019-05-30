@@ -38,3 +38,7 @@ export function getLogBody(recentLogs, students) {
 	}
 	return logBody;
 }
+
+export function idToName(students, student_id) {
+	return students.filter(s => s.student_id == student_id)[0].name;
+}

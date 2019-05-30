@@ -27,6 +27,44 @@ export let navBar = {
 	}
 }
 
+export let inputBox = {
+    view: function(vnode) {
+        return [
+                m('.hero-body', {style: 'align-items: start;'},
+                    m('.container.has-text-centered',
+                        m('div.column.is-4.is-offset-4',
+                            m('.box',
+                                m('h3.title', vnode.attrs.title),
+                                m('.field',
+                                    m('.control',
+                                        m('input#student_id.input.is-large.is-fullwidth.has-text-centered',
+                                        {type:'number', placeholder:'2019240', autofocus: 'true', onkeydown: (e) => vnode.attrs.kd(e)})
+                                    )
+                                ),
+                                m('button.button.is-primary.is-block.is-info-.is-large.is-fullwidth', {type: 'button', onclick: vnode.attrs.clickFunc},'Submit'),
+                            ),
+                        )
+                    )
+                )
+        ];
+    }
+}
+
+function z(n) {
+    return n > 9 ? n : '0'+n;
+}
+
+export function formatDate(d, time=true) {
+    if (d == null) { return ""; }
+    let s;
+    if (time) {
+        s = [d.getFullYear(), '-', z(d.getMonth()+1), '-', z(d.getDate() ), ', ', d.toLocaleTimeString()].join('');
+    } else {
+        s = [d.getFullYear(), '-', z(d.getMonth()+1), '-', z(d.getDate())].join('');
+    }
+    return s;
+}
+
 export async function request(method, hash, data) {
     if (data === "") {
         return await m.request({
