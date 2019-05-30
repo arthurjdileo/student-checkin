@@ -33,6 +33,7 @@ func main() {
 	router.Handle("/api/logs/", GetLogs(db)).Methods(http.MethodGet)
 	router.Handle("/api/students/", NewStudent(db)).Methods(http.MethodPost)
 	router.Handle("/api/students/{id}", EditStudent(db)).Methods(http.MethodPost)
+	router.Handle("/api/students/{id}", DeleteStudent(db)).Methods(http.MethodDelete)
 	router.PathPrefix(dir).Handler(http.StripPrefix(dir, http.FileServer(http.Dir("./app"+dir))))
 
 	// CORS
@@ -125,6 +126,40 @@ func EditStudent(db *sql.DB) http.Handler {
 		id := vars["id"]
 
 		_, err := db.Exec(editStudentQuery, name, student_id, id)
+		if err != nil {
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	})
+}
+
+func DeleteStudent(db *sql.DB) http.Handler {
+	const delStudentQuery string = `
+		DELETE FROM users where id = ?
+	`
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.ParseMultipartForm(1024)
+
+		vars := mux.Vars(r)
+		id := vars["id"]
+
+		// creating a tx just in case something goes wrong, we can roll back the destructive changes
+		tx, err := db.Begin()
+		if err != nil {
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		_, err = db.Exec(delStudentQuery, id)
+		if err != nil {
+			tx.Rollback()
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		err = tx.Commit()
 		if err != nil {
 			log.Printf("%s", err)
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())

@@ -34,6 +34,10 @@ export async function EditStudent(name, student_id, id) {
 	await request('POST', `/api/students/${id}`, data)
 }
 
+export async function DeleteStudent(id) {
+	await request('DELETE', `/api/students/${id}`, "")
+}
+
 // export async function SubmitForm(data, edit=false, uuid="") {
 // 	if (!edit) {
 // 		await m.request({

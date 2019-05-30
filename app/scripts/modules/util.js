@@ -199,7 +199,7 @@ export var EdiTable = {
                                 row.editing = false
                                 return
                             }
-                        }, "Done"))
+                        }, "Done")),
                     ]
                 } else {
                     return [
@@ -210,7 +210,9 @@ export var EdiTable = {
                                 row.selected = true
                                 return
                             }
-                        }, "Edit"))
+                        }, "Edit"),
+                        m('button.button.is-danger', {style: 'margin-left: 7px;', onclick: () => vnode.attrs.deleteFunc(row)} ,'Delete')
+                        ),
                     ]
                 }
             },
@@ -260,7 +262,8 @@ export var CreaTable = {
             saveFunc(editedRows) {
                 vnode.attrs.saveNewFunc(vnode.state.newRows)
                 vnode.attrs.saveEditedFunc(editedRows)
-            }
+            },
+            deleteFunc: vnode.attrs.deleteFunc
         })
     }
 }

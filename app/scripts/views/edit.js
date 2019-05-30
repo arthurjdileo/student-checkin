@@ -1,6 +1,6 @@
 import m from '../modules/mithril.js';
 import {navBar, CreaTable} from '../modules/util.js';
-import {GetStudents, NewStudent, EditStudent} from '../services/student-manager.js';
+import {GetStudents, NewStudent, EditStudent, DeleteStudent} from '../services/student-manager.js';
 
 let students = [];
 
@@ -43,27 +43,59 @@ var UserTable = {
 				];
 			},
 			newRow: {},
-			saveNewFunc(newRows) {
+			async saveNewFunc(newRows) {
 				console.log("new: " + JSON.stringify(newRows))
 				for (let r of newRows) {
 					if (r.editing) {
 						alert("Please finishing editing (press the \"Done\" button next to the selected rows) before saving your changes.");
 						return;
 					}
-					NewStudent(r.name, r.student_id);
-					m.redraw();
+					if (!r.name || !r.student_id) {
+							r.editing = false;
+							r.selected = false;
+							let pRows = document.querySelectorAll('[id=null]');
+							pRows.forEach(function(r) {
+								r.remove();
+							})
+							m.redraw();
+							return;
+					}
+					await NewStudent(r.name, r.student_id);
+					r.selected = false;
+					oninit();
 				}
 			},
-			saveEditedFunc(editedRows) {
+			async saveEditedFunc(editedRows) {
 				console.log("edited: " + JSON.stringify(editedRows))
 				for (let r of editedRows) {
 					if (r.editing) {
 						alert("Please finishing editing (press the \"Done\" button next to the selected rows) before saving your changes.");
 						return;
 					}
-					EditStudent(r.name, r.student_id, r.id);
-					m.redraw();
+					if (!r.name || !r.student_id) {
+							r.editing = false;
+							r.selected = false;
+							let pRows = document.querySelectorAll('[id=null]');
+							pRows.forEach(function(r) {
+								r.remove();
+							})
+							m.redraw();
+							return;
+					}
+					await EditStudent(r.name, r.student_id, r.id);
+					r.selected = false;
+					oninit();
 				}
+			},
+			async deleteFunc(row) {
+				let confirmed = confirm("Are you sure you want to delete " + row.name)
+				if (confirmed) {
+					await DeleteStudent(row.id)
+				}
+				else {
+					return;
+				}
+				oninit();
 			}
 		})
 		];
