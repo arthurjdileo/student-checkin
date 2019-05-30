@@ -32,7 +32,7 @@ func main() {
 	router.Handle("/api/students/", GetStudents(db)).Methods(http.MethodGet)
 	router.Handle("/api/logs/", GetLogs(db)).Methods(http.MethodGet)
 	router.Handle("/api/students/", NewStudent(db)).Methods(http.MethodPost)
-	router.Handle("/api/students/{id}", NewStudent(db)).Methods(http.MethodPost)
+	router.Handle("/api/students/{id}", EditStudent(db)).Methods(http.MethodPost)
 	router.PathPrefix(dir).Handler(http.StripPrefix(dir, http.FileServer(http.Dir("./app"+dir))))
 
 	// CORS
@@ -40,7 +40,6 @@ func main() {
 		handlers.AllowedOrigins([]string{
 			"http://localhost:8000"}),
 		handlers.AllowedMethods([]string{
-			http.MethodOptions,
 			http.MethodPut,
 			http.MethodPost,
 			http.MethodGet,
@@ -124,7 +123,6 @@ func EditStudent(db *sql.DB) http.Handler {
 		name := r.FormValue("name")
 		student_id := r.FormValue("student_id")
 		id := vars["id"]
-		log.Println(id)
 
 		_, err := db.Exec(editStudentQuery, name, student_id, id)
 		if err != nil {
