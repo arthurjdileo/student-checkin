@@ -1,11 +1,11 @@
 import m from '../modules/mithril.js';
 import {navBar, CreaTable} from '../modules/util.js';
-import {GetStudents, NewStudent, EditStudent, DeleteStudent} from '../services/student-manager.js';
+import * as StudentMgr from '../services/student-manager.js';
 
 let students = [];
 
 export async function oninit() {
-	students = await GetStudents();
+	students = await StudentMgr.GetStudents();
 	m.redraw();
 }
 
@@ -44,7 +44,6 @@ var UserTable = {
 			},
 			newRow: {},
 			async saveNewFunc(newRows) {
-				console.log("new: " + JSON.stringify(newRows))
 				for (let r of newRows) {
 					if (r.editing) {
 						alert("Please finishing editing (press the \"Done\" button next to the selected rows) before saving your changes.");
@@ -60,13 +59,12 @@ var UserTable = {
 							m.redraw();
 							return;
 					}
-					await NewStudent(r.name, r.student_id);
+					await StudentMgr.NewStudent(r.name, r.student_id);
 					r.selected = false;
 					oninit();
 				}
 			},
 			async saveEditedFunc(editedRows) {
-				console.log("edited: " + JSON.stringify(editedRows))
 				for (let r of editedRows) {
 					if (r.editing) {
 						alert("Please finishing editing (press the \"Done\" button next to the selected rows) before saving your changes.");
@@ -82,7 +80,7 @@ var UserTable = {
 							m.redraw();
 							return;
 					}
-					await EditStudent(r.name, r.student_id, r.id);
+					await StudentMgr.EditStudent(r.name, r.student_id, r.id);
 					r.selected = false;
 					oninit();
 				}
@@ -90,7 +88,7 @@ var UserTable = {
 			async deleteFunc(row) {
 				let confirmed = confirm("Are you sure you want to delete " + row.name)
 				if (confirmed) {
-					await DeleteStudent(row.id)
+					await StudentMgr.DeleteStudent(row.id)
 				}
 				else {
 					return;

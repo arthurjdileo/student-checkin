@@ -1,7 +1,7 @@
 import m from '../modules/mithril.js';
 
 export let navBar = {
-	view: function(vnode) {
+	view: function() {
 		return [
 			m('nav.navbar', {role: 'navigation', 'aria-label': 'main navi'},
 				m('.navbar-brand',
@@ -25,6 +25,21 @@ export let navBar = {
 			),
 		];
 	}
+}
+
+export async function request(method, hash, data) {
+    if (data === "") {
+        return await m.request({
+            method: method,
+            url: window.location.origin + hash
+        });
+    } else {
+        return await m.request({
+            method: method,
+            url: window.location.origin + hash,
+            data: data
+        });
+    }
 }
 
 var Table = {

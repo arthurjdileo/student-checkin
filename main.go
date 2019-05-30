@@ -30,10 +30,12 @@ func main() {
 		return
 	}
 	router.Handle("/api/students/", GetStudents(db)).Methods(http.MethodGet)
-	router.Handle("/api/logs/", GetLogs(db)).Methods(http.MethodGet)
 	router.Handle("/api/students/", NewStudent(db)).Methods(http.MethodPost)
 	router.Handle("/api/students/{id}", EditStudent(db)).Methods(http.MethodPost)
 	router.Handle("/api/students/{id}", DeleteStudent(db)).Methods(http.MethodDelete)
+	router.Handle("/api/logs/{student_id}", LogStudent(db)).Methods(http.MethodPost)
+	router.Handle("/api/logs/{student_id}", GetLogs(db)).Methods(http.MethodGet)
+	router.Handle("/api/logs/", GetRecentLogs(db)).Methods(http.MethodGet)
 	router.PathPrefix(dir).Handler(http.StripPrefix(dir, http.FileServer(http.Dir("./app"+dir))))
 
 	// CORS
@@ -73,7 +75,9 @@ func GetStudents(db *sql.DB) http.Handler {
 		ORDER BY
 			users.id DESC
 	`
-	return dbGetRows(db, studentQuery)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dbGetRows(w, r, db, studentQuery)
+	})
 }
 
 func GetLogs(db *sql.DB) http.Handler {
@@ -86,10 +90,58 @@ func GetLogs(db *sql.DB) http.Handler {
 		)
 		FROM
 			logs
+		WHERE
+			student_id = ?
 		ORDER BY
 			logs.created DESC
 	`
-	return dbGetRows(db, logQuery)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		student_id := vars["student_id"]
+
+		dbGetRows(w, r, db, logQuery, student_id)
+	})
+}
+
+func GetRecentLogs(db *sql.DB) http.Handler {
+	const recentLogQuery1 string = `
+		SELECT JSON_OBJECT(
+			'id', logs.id,
+			'created', DATE_FORMAT(logs.created, '%Y-%m-%dT%TZ'),
+			'student_id', logs.student_id,
+			'action', logs.action
+		)
+		FROM 
+			logs a
+		LEFT OUTER JOIN 
+			logs b
+		ON
+			a.student_id = b.student_id AND a.created < b.created
+		WHERE
+			DATE(created) = DATE(NOW())
+		ORDER BY
+			logs.created DESC
+	`
+	const recentLogQuery string = `
+	SELECT JSON_OBJECT(
+			'id', a.id,
+			'created', DATE_FORMAT(a.created, '%Y-%m-%dT%TZ'),
+			'student_id', a.student_id,
+			'action', a.action
+		)
+	FROM 
+		logs a
+	LEFT OUTER JOIN 
+		logs b
+	ON
+		a.student_id = b.student_id AND a.created < b.created
+	WHERE b.student_id IS NULL
+	ORDER BY a.created desc;
+	`
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		dbGetRows(w, r, db, recentLogQuery)
+	})
 }
 
 func NewStudent(db *sql.DB) http.Handler {
@@ -136,7 +188,8 @@ func EditStudent(db *sql.DB) http.Handler {
 
 func DeleteStudent(db *sql.DB) http.Handler {
 	const delStudentQuery string = `
-		DELETE FROM users where id = ?
+		DELETE FROM users 
+		WHERE id = ?
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.ParseMultipartForm(1024)
@@ -168,48 +221,88 @@ func DeleteStudent(db *sql.DB) http.Handler {
 	})
 }
 
-func dbGetRows(db *sql.DB, query string) http.Handler {
+func LogStudent(db *sql.DB) http.Handler {
+	const lastLogQuery string = `
+		SELECT action FROM logs WHERE DATE(created)=DATE(NOW()) AND student_id = ? ORDER BY created DESC LIMIT 1;
+	`
+	const logQuery string = `
+		INSERT INTO logs (student_id, action) VALUES (?, ?)
+	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		student_id := vars["student_id"]
+		var curAction string
+		var nextAction string
 
-		rows, err := db.Query(query)
-		if err != nil {
+		err := db.QueryRow(lastLogQuery, student_id).Scan(&curAction)
+		switch {
+		case err == sql.ErrNoRows:
+			curAction = ""
+			nextAction = "in"
+		case err != nil:
 			log.Printf("%s", err)
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
-		}
-		defer rows.Close()
-
-		jsonRows := make([]json.RawMessage, 0)
-
-		for rows.Next() {
-			var jsonRow string
-
-			if err := rows.Scan(&jsonRow); err != nil {
-				log.Printf("%s", err)
-				sendErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
+		default:
+			if curAction == "in" {
+				nextAction = "out"
+			} else if curAction == "out" {
+				nextAction = "in"
 			}
-
-			raw := json.RawMessage(jsonRow)
-			jsonRows = append(jsonRows, raw)
 		}
 
-		if err := rows.Err(); err != nil {
-			log.Printf("%s", err)
-			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+		log.Printf(curAction)
+		log.Printf(nextAction)
 
-		ret, err := json.Marshal(jsonRows)
+		_, err = db.Exec(logQuery, student_id, nextAction)
 		if err != nil {
 			log.Printf("%s", err)
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-
-		w.Header().Set("Content-type", "application/json")
-		w.Write(ret)
 	})
+}
+
+func dbGetRows(w http.ResponseWriter, r *http.Request, db *sql.DB, query string, args ...interface{}) {
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		log.Printf("%s", err)
+		sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer rows.Close()
+
+	jsonRows := make([]json.RawMessage, 0)
+
+	for rows.Next() {
+		var jsonRow string
+
+		if err := rows.Scan(&jsonRow); err != nil {
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		raw := json.RawMessage(jsonRow)
+		jsonRows = append(jsonRows, raw)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("%s", err)
+		sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ret, err := json.Marshal(jsonRows)
+	if err != nil {
+		log.Printf("%s", err)
+		sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.Header().Set("Content-type", "application/json")
+	w.Write(ret)
 }
 
 type response struct {
