@@ -58,9 +58,9 @@ export function formatDate(d, time=true) {
     if (d == null) { return ""; }
     let s;
     if (time) {
-        s = [d.getFullYear(), '-', z(d.getMonth()+1), '-', z(d.getDate() ), ', ', d.toLocaleTimeString()].join('');
+        s = [z(d.getMonth()+1), '/', z(d.getDate()), '/', d.getFullYear(), ', ', d.toLocaleTimeString()].join('');
     } else {
-        s = [d.getFullYear(), '-', z(d.getMonth()+1), '-', z(d.getDate())].join('');
+        s = [z(d.getMonth()+1), '/', z(d.getDate()), '/', d.getFullYear()].join('');
     }
     return s;
 }

@@ -38,17 +38,6 @@ func main() {
 	router.Handle("/api/logs/", GetRecentLogs(db)).Methods(http.MethodGet)
 	router.PathPrefix(dir).Handler(http.StripPrefix(dir, http.FileServer(http.Dir("./app"+dir))))
 
-	// CORS
-	router.Use(handlers.CORS(
-		handlers.AllowedOrigins([]string{
-			"http://localhost:8000"}),
-		handlers.AllowedMethods([]string{
-			http.MethodPut,
-			http.MethodPost,
-			http.MethodGet,
-			http.MethodDelete,
-		})))
-
 	log.Println("api started")
 
 	port := "8000"

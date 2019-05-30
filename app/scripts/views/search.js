@@ -24,18 +24,18 @@ function keyDown(e) {
 let searchTable = {
 	view: function() {
 		return [
-			m('h4', {style: 'margin-bottom: 10px'},'Currently viewing ', name),
+			m('h3.has-text-weight-bold', {style: 'margin-bottom: 10px'}, name),
 			m(SorTable, {
 				tableAttrs: {class: 'is-striped', style: 'display: inline-block;'},
 				headers: [
-					{label: 'Date', key: 'created', style: 'width: 250px;'},
-					{label: 'Status', key: 'action', style: 'width: 150px;'}
+					{label: 'Date', key: 'created', style: 'width: 350px;'},
+					{label: 'Status', key: 'action', style: 'width: 200px;'}
 				],
 				backupKeys: ['created'],
 				body: logs,
 				rowMapper(l) {
 					return [
-						m('td', formatDate(l.created, true)),
+						m('td', formatDate(l.created)),
 						m('td', l.action)
 					];
 				}
