@@ -92,24 +92,6 @@ func GetLogs(db *sql.DB) http.Handler {
 }
 
 func GetRecentLogs(db *sql.DB) http.Handler {
-	const recentLogQuery1 string = `
-		SELECT JSON_OBJECT(
-			'id', logs.id,
-			'created', DATE_FORMAT(logs.created, '%Y-%m-%dT%TZ'),
-			'student_id', logs.student_id,
-			'action', logs.action
-		)
-		FROM 
-			logs a
-		LEFT OUTER JOIN 
-			logs b
-		ON
-			a.student_id = b.student_id AND a.created < b.created
-		WHERE
-			DATE(created) = DATE(NOW())
-		ORDER BY
-			logs.created DESC
-	`
 	const recentLogQuery string = `
 	SELECT JSON_OBJECT(
 			'id', a.id,
