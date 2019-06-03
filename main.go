@@ -142,9 +142,18 @@ func NewStudent(db *sql.DB) http.Handler {
 }
 
 func EditStudent(db *sql.DB) http.Handler {
+	const editStudentQuery3 string = `
+		SELECT student_id FROM users WHERE id = ?
+	`
 	const editStudentQuery string = `
 		UPDATE users SET name = ?, student_id = ?
 		WHERE id = ?
+	`
+	const editStudentQuery2 string = `
+		UPDATE logs SET student_id = REPLACE(student_id, ?, ?)
+	`
+	const setKey string = `
+		SET FOREIGN_KEY_CHECKS = ?
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.ParseMultipartForm(1024)
@@ -153,13 +162,31 @@ func EditStudent(db *sql.DB) http.Handler {
 		name := r.FormValue("name")
 		student_id := r.FormValue("student_id")
 		id := vars["id"]
+		var oldStudentID int
 
-		_, err := db.Exec(editStudentQuery, name, student_id, id)
+		db.Exec(setKey, 0)
+
+		err := db.QueryRow(editStudentQuery3, id).Scan(&oldStudentID)
+
+		log.Println(oldStudentID)
+		log.Println(student_id)
+		log.Println(id)
+
+		_, err = db.Exec(editStudentQuery, name, student_id, id)
 		if err != nil {
 			log.Printf("%s", err)
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		_, err = db.Exec(editStudentQuery2, oldStudentID, student_id)
+		if err != nil {
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		db.Exec(setKey, 1)
 	})
 }
 

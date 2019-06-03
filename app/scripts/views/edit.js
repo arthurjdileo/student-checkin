@@ -61,7 +61,7 @@ var UserTable = {
 					}
 					await StudentMgr.NewStudent(r.name, r.student_id);
 					r.selected = false;
-					oninit();
+					m.redraw();
 				}
 			},
 			async saveEditedFunc(editedRows) {
