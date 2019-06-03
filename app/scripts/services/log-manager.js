@@ -21,24 +21,6 @@ export async function GetLogs(student_id) {
 	return r;
 }
 
-export function getLogBody(recentLogs, students) {
-	let logBody = [];
-	for (let s of students) {
-		let tempObj = {}
-		tempObj.name = s.name;
-		tempObj.student_id = s.student_id;
-		for (let l of recentLogs) {
-			if (l.student_id == tempObj.student_id) {
-				tempObj.action = l.action;
-				tempObj.created = l.created;
-				continue;
-			}
-		}
-		logBody.push(tempObj);
-	}
-	return logBody;
-}
-
 export function idToName(students, student_id) {
 	return students.filter(s => s.student_id == student_id)[0].name;
 }

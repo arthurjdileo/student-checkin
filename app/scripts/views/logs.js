@@ -4,14 +4,10 @@ import * as LogMgr from '../services/log-manager.js';
 import {GetStudents} from '../services/student-manager.js';
 
 let recentLogs = [];
-let students = [];
-let logBody = [];
 let today = new Date();
 
 export async function oninit() {
 	recentLogs = await LogMgr.GetRecentLogs();
-	students = await GetStudents();
-	logBody = LogMgr.getLogBody(recentLogs, students);
 	m.redraw();
 }
 
@@ -25,7 +21,7 @@ let logTable = {
 					{label: 'Status', key: 'action', attrs: {style: 'width: 150px;'}}
 				],
 				backupKeys: ['action'],
-				body: logBody,
+				body: recentLogs,
 				rowMapper(s) {
 					return [
 						m('td', s.name),

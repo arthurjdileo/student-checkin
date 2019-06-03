@@ -102,7 +102,8 @@ func GetRecentLogs(db *sql.DB) http.Handler {
 			'id', a.id,
 			'created', DATE_FORMAT(a.created, '%Y-%m-%dT%TZ'),
 			'student_id', a.student_id,
-			'action', a.action
+			'action', a.action,
+			'name', u.name
 		)
 	FROM 
 		logs a
@@ -110,9 +111,13 @@ func GetRecentLogs(db *sql.DB) http.Handler {
 		logs b
 	ON
 		a.student_id = b.student_id AND a.created < b.created
-	WHERE 
+	INNER JOIN
+		users u
+	ON
+		a.student_id = u.student_id
+	WHERE
 		b.student_id IS NULL
-	ORDER BY 
+	ORDER BY
 		a.created desc;
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
