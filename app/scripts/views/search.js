@@ -4,14 +4,12 @@ import {GetLogs, idToName} from '../services/log-manager.js';
 import {GetStudents} from '../services/student-manager.js';
 
 let logs = [];
-let students = [];
 let name = ""
 
 export async function submit() {
 	let student_id = document.getElementById("student_id").value;
 	logs = await GetLogs(student_id);
-	students = await GetStudents();
-	name = idToName(students, student_id)
+	name = logs[0].name;
 	m.redraw();
 }
 

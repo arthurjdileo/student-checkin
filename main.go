@@ -79,12 +79,17 @@ func GetLogs(db *sql.DB) http.Handler {
 			'id', logs.id,
 			'created', DATE_FORMAT(logs.created, '%Y-%m-%dT%TZ'),
 			'student_id', logs.student_id,
-			'action', logs.action
+			'action', logs.action,
+			'name', users.name
 		)
 		FROM
 			logs
+		INNER JOIN
+			users
+		ON
+			logs.student_id = users.student_id
 		WHERE
-			student_id = ?
+			logs.student_id = ?
 		ORDER BY
 			logs.created DESC
 	`
@@ -121,7 +126,6 @@ func GetRecentLogs(db *sql.DB) http.Handler {
 		a.created desc;
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		dbGetRows(w, r, db, recentLogQuery)
 	})
 }
