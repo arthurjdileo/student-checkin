@@ -3,14 +3,13 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
-)
 
-import ()
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/mux"
+)
 
 const dir = "/"
 
@@ -28,6 +27,13 @@ func main() {
 		log.Printf("Cannot connect to db: %s", err)
 		return
 	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Printf("Cannot connect to db: %s", err)
+		return
+	}
+
 	router.Handle("/api/students/", GetStudents(db)).Methods(http.MethodGet)
 	router.Handle("/api/students/", NewStudent(db)).Methods(http.MethodPost)
 	router.Handle("/api/students/{id}", EditStudent(db)).Methods(http.MethodPost)
@@ -39,8 +45,7 @@ func main() {
 
 	log.Println("api started")
 
-	port := "8000"
-	bindAddress := ":" + port
+	bindAddress := ":" + "8000"
 
 	srv := &http.Server{
 		Addr:    bindAddress,
@@ -105,8 +110,10 @@ func GetRecentLogs(db *sql.DB) http.Handler {
 		logs b
 	ON
 		a.student_id = b.student_id AND a.created < b.created
-	WHERE b.student_id IS NULL
-	ORDER BY a.created desc;
+	WHERE 
+		b.student_id IS NULL
+	ORDER BY 
+		a.created desc;
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
