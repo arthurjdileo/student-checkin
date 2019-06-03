@@ -24,3 +24,16 @@ export async function GetLogs(student_id) {
 export function idToName(students, student_id) {
 	return students.filter(s => s.student_id == student_id)[0].name;
 }
+
+export function populate(recentLogs, students) {
+	let defaultDate = new Date();
+	defaultDate.setHours(8);
+	defaultDate.setMinutes(0);
+	defaultDate.setSeconds(0);
+
+	for (let s of students) {
+		if (recentLogs.find(r => r.student_id === s.student_id) == undefined) {
+			recentLogs.push({action: "out", created: defaultDate, name: s.name, student_id: s.student_id})
+		}
+	}
+}

@@ -1,5 +1,5 @@
 import m from '../modules/mithril.js';
-import {navBar, inputBox, SorTable, formatDate} from '../modules/util.js';
+import {navBar, inputBox, SorTable, formatDate, actionColor} from '../modules/util.js';
 import {GetLogs, idToName} from '../services/log-manager.js';
 import {GetStudents} from '../services/student-manager.js';
 
@@ -28,15 +28,20 @@ let searchTable = {
 			m(SorTable, {
 				tableAttrs: {class: 'is-striped', style: 'display: inline-block;'},
 				headers: [
-					{label: 'Date', key: 'created', style: 'width: 350px;'},
-					{label: 'Status', key: 'action', style: 'width: 200px;'}
+					{label: 'Date', key: 'created', attrs: {style: 'width: 300px;'}},
+					{label: 'Status', key: 'action', choices: [
+						{label: 'in', key: 'in'},
+						{label: 'out', key: 'out'}
+					],
+					attrs: {style: 'width: 300px;',
+					}},
 				],
 				backupKeys: ['created'],
 				body: logs,
 				rowMapper(l) {
 					return [
 						m('td', formatDate(l.created)),
-						m('td', l.action)
+						m('td', {style: `color: ${actionColor(l.action)}`}, l.action)
 					];
 				}
 			})

@@ -38,7 +38,8 @@ var UserTable = {
 						placeholder: 'Student ID',
 						value: s.student_id,
 						oninput(e) {s.student_id = e.target.value},
-						required: true
+						required: true,
+						type: 'number'
 					}))
 				];
 			},

@@ -147,14 +147,14 @@ func NewStudent(db *sql.DB) http.Handler {
 }
 
 func EditStudent(db *sql.DB) http.Handler {
-	const editStudentQuery3 string = `
+	const editStudentQuery string = `
 		SELECT student_id FROM users WHERE id = ?
 	`
-	const editStudentQuery string = `
+	const editStudentQuery2 string = `
 		UPDATE users SET name = ?, student_id = ?
 		WHERE id = ?
 	`
-	const editStudentQuery2 string = `
+	const editStudentQuery3 string = `
 		UPDATE logs SET student_id = REPLACE(student_id, ?, ?)
 	`
 	const setKey string = `
@@ -171,20 +171,16 @@ func EditStudent(db *sql.DB) http.Handler {
 
 		db.Exec(setKey, 0)
 
-		err := db.QueryRow(editStudentQuery3, id).Scan(&oldStudentID)
+		err := db.QueryRow(editStudentQuery, id).Scan(&oldStudentID)
 
-		log.Println(oldStudentID)
-		log.Println(student_id)
-		log.Println(id)
-
-		_, err = db.Exec(editStudentQuery, name, student_id, id)
+		_, err = db.Exec(editStudentQuery2, name, student_id, id)
 		if err != nil {
 			log.Printf("%s", err)
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		_, err = db.Exec(editStudentQuery2, oldStudentID, student_id)
+		_, err = db.Exec(editStudentQuery3, oldStudentID, student_id)
 		if err != nil {
 			log.Printf("%s", err)
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -197,12 +193,12 @@ func EditStudent(db *sql.DB) http.Handler {
 
 func DeleteStudent(db *sql.DB) http.Handler {
 	const delStudentQuery string = `
-		DELETE FROM users 
-		WHERE id = ?
-	`
-	const delStudentQuery2 string = `
 		DELETE FROM logs
 		WHERE student_id = ?
+	`
+	const delStudentQuery2 string = `
+		DELETE FROM users 
+		WHERE id = ?
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.ParseMultipartForm(1024)
@@ -219,7 +215,7 @@ func DeleteStudent(db *sql.DB) http.Handler {
 			return
 		}
 
-		_, err = db.Exec(delStudentQuery2, student_id)
+		_, err = db.Exec(delStudentQuery, student_id)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("%s", err)
@@ -227,7 +223,7 @@ func DeleteStudent(db *sql.DB) http.Handler {
 			return
 		}
 
-		_, err = db.Exec(delStudentQuery, id)
+		_, err = db.Exec(delStudentQuery2, id)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("%s", err)

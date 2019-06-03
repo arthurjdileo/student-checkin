@@ -1,3 +1,16 @@
 .navbar {
 	background-color: #F5F5F5;
 }
+
+th.clickable.sort {
+    padding-right: 1.5em;
+}
+
+th.clickable.sort.is-selected::after {
+    content: "▼";
+    position: absolute;
+}
+
+.clickable {
+    cursor: pointer;
+}

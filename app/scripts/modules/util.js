@@ -27,6 +27,15 @@ export let navBar = {
 	}
 }
 
+export function actionColor(s) {
+    if (s.includes("in")) {
+        return "green";
+    }
+    else {
+        return "red";
+    }
+}
+
 export let inputBox = {
     view: function(vnode) {
         return [
@@ -67,16 +76,22 @@ export function formatDate(d, time=true) {
 
 export async function request(method, hash, data) {
     if (data === "") {
-        return await m.request({
+        let r = await m.request({
             method: method,
             url: window.location.origin + hash
+        }).catch(function(e) {
+            alert(e.message);
         });
+        return r;
     } else {
-        return await m.request({
+        let r = await m.request({
             method: method,
             url: window.location.origin + hash,
             data: data
+        }).catch(function(e) {
+            alert(e.response);
         });
+        return r;
     }
 }
 
