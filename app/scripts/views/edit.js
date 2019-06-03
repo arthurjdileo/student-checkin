@@ -88,7 +88,7 @@ var UserTable = {
 			async deleteFunc(row) {
 				let confirmed = confirm("Are you sure you want to delete " + row.name)
 				if (confirmed) {
-					await StudentMgr.DeleteStudent(row.id)
+					await StudentMgr.DeleteStudent(row.id, row.student_id)
 				}
 				else {
 					return;

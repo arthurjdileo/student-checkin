@@ -16,9 +16,11 @@ export async function EditStudent(name, student_id, id) {
 	let data = new FormData();
 	data.append("name", name);
 	data.append("student_id", student_id);
-	await request('POST', `/api/students/${id}`, data)
+	await request('POST', `/api/students/${id}`, data);
 }
 
-export async function DeleteStudent(id) {
-	await request('DELETE', `/api/students/${id}`, "")
+export async function DeleteStudent(id, student_id) {
+	let data = new FormData();
+	data.append("student_id", student_id)
+	await request('DELETE', `/api/students/${id}`, data);
 }

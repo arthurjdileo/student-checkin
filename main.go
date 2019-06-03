@@ -168,11 +168,16 @@ func DeleteStudent(db *sql.DB) http.Handler {
 		DELETE FROM users 
 		WHERE id = ?
 	`
+	const delStudentQuery2 string = `
+		DELETE FROM logs
+		WHERE student_id = ?
+	`
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.ParseMultipartForm(1024)
 
 		vars := mux.Vars(r)
 		id := vars["id"]
+		student_id := r.FormValue("student_id")
 
 		// creating a tx just in case something goes wrong, we can roll back the destructive changes
 		tx, err := db.Begin()
@@ -181,6 +186,15 @@ func DeleteStudent(db *sql.DB) http.Handler {
 			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		_, err = db.Exec(delStudentQuery2, student_id)
+		if err != nil {
+			tx.Rollback()
+			log.Printf("%s", err)
+			sendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
 		_, err = db.Exec(delStudentQuery, id)
 		if err != nil {
 			tx.Rollback()
