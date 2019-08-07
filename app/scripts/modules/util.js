@@ -95,7 +95,7 @@ export async function request(method, hash, data) {
     }
 }
 
-var Table = {
+let Table = {
     view: function(vnode) {
         return m("table.table", vnode.attrs.tableAttrs,
                 m("thead",
@@ -110,7 +110,7 @@ var Table = {
 function multisort(filters) {
     return function(A,B) {
         for (let filter of filters) {
-            if (filter != "") {
+            if (filter !== "") {
                 let a = A[filter] || ""
                 let b = B[filter] || ""
 
@@ -145,13 +145,13 @@ function multisort(filters) {
 //        - (same as headers but only uses .label and .attrs)
 //    tableAttrs: standard attr map applied to the <table> node
 //    prependRows: rows added to the top of the table, ignoring any sorts/filters.
-export var SorTable = {
+let SorTable = {
     sortKey: "",
     filters: new Map(),
 
     isActive(vnode, key) {
         let filters = vnode.state.filters
-        return ((filters.has(key) && filters.get(key)[0] != null) || vnode.state.sortKey == key)
+        return ((filters.has(key) && filters.get(key)[0] != null) || vnode.state.sortKey === key)
     },
     headerDecoration(vnode, key) {
         let filters = vnode.state.filters
@@ -191,7 +191,7 @@ export var SorTable = {
                             let e = filter.shift()
                             filter.push(e)
                         } else {
-                            if (vnode.state.sortKey == h.key) {
+                            if (vnode.state.sortKey === h.key) {
                                 vnode.state.sortKey = "";
                             } else {
                                 vnode.state.sortKey = h.key;
@@ -214,7 +214,7 @@ export var SorTable = {
                 }
                 for (let [col,filterList] of vnode.state.filters) {
                     if ((filterList[0] != null) &&
-                        filterList[0].key != row[col]) {
+                        filterList[0].key !== row[col]) {
                         return false
                     }
                 }
@@ -243,7 +243,7 @@ export var SorTable = {
 //    newRowFunc: onclick for the "+" button. If not defined, the button is not shown.
 //            If this is falsey, the "+" button is not shown.
 //    saveFunc: function called when the "Save" button is pressed, receives the list of modified rows.
-export var EdiTable = {
+let EdiTable = {
     view(vnode) {
         return m(SorTable, {
             tableAttrs: vnode.attrs.tableAttrs,
@@ -259,6 +259,13 @@ export var EdiTable = {
             prependRows: vnode.attrs.prependRows,
             body: vnode.attrs.body,
             rowMapper(row) {
+                if (row.static) {
+                    return [
+                        ...vnode.attrs.rowMapper(row),
+                        m("td")
+                    ]
+                }
+
                 if (row.editing) {
                     return [
                         ...vnode.attrs.editingRowMapper(row),
@@ -267,7 +274,7 @@ export var EdiTable = {
                                 row.editing = false
                                 return
                             }
-                        }, "Done")),
+                        }, "Done"))
                     ]
                 } else {
                     return [
@@ -278,9 +285,7 @@ export var EdiTable = {
                                 row.selected = true
                                 return
                             }
-                        }, "Edit"),
-                        m('button.button.is-danger', {style: 'margin-left: 7px;', onclick: () => vnode.attrs.deleteFunc(row)} ,'Delete')
-                        ),
+                        }, "Edit"))
                     ]
                 }
             },
@@ -288,6 +293,7 @@ export var EdiTable = {
                 attrs: {
                     colspan: vnode.attrs.headers.length+1,
                     class: "editable-save-cell",
+                    style: vnode.attrs.body.some(row => !row.editing && row.selected)? "display: none;" : "",
                 },
                 label: m("button.button.is-primary", {
                     onclick() {
@@ -308,7 +314,7 @@ export var EdiTable = {
 //    newRow: prototype object filled into a new row when the "+" button is pressed.
 //    saveNewFunc: function which receives a list of all the newly-added rows when the save button is pressed.
 //    saveEditedFunc: function which receives a list of all the modified rows when the save button is pressed.
-export var CreaTable = {
+let CreaTable = {
     newRows: [],
     view(vnode) {
         return m(EdiTable, {
@@ -330,8 +336,7 @@ export var CreaTable = {
             saveFunc(editedRows) {
                 vnode.attrs.saveNewFunc(vnode.state.newRows)
                 vnode.attrs.saveEditedFunc(editedRows)
-            },
-            deleteFunc: vnode.attrs.deleteFunc
+            }
         })
     }
 }
